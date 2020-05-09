@@ -448,4 +448,4 @@ for filename in os.listdir('./Discord bot/cogs'):
 
 
 # Discord token
-client.run('Njk5MzkzMDM0NTM3OTI2NzEw.XpTw5Q.r-b2uk7ekySJ_bxLWgPZykBbASo')
+client.run('Njk5MzkzMDM0NTM3OTI2NzEw.Xrc5og.bWuGl6k0UqMOvieKUK3TzO0TaEc')
