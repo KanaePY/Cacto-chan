@@ -240,8 +240,10 @@ if __name__ == '__main__':
 
 # Creating a DataBase Pool Function
 
+p = open("password.txt")
+
 async def create_db_pool():
-    client.pg_con = await asyncpg.create_pool(database="DiscordBot-DB", user="postgres", password="virusvs321")
+    client.pg_con = await asyncpg.create_pool(database="DiscordBot-DB", user="postgres", password=w.read())
 
 # Looping the DataBase Pool Function
 
