@@ -1,6 +1,4 @@
-# Remember to add leveling system
-# Remember to add economy and other misc commands
-# Remember to better the insufficient permissions line
+# Remember to add Json to muterole command
 
 
 # Imports
@@ -10,10 +8,13 @@ import discord
 import discord.ext
 import json
 import random
+import sys, traceback
+import asyncio
+import asyncpg
 from random import randint
-#  from discord.ext import tasks
-#  from itertools import cycle
 from discord.ext import commands
+from discord.ext import tasks
+from itertools import cycle
 
 
 # Getting prefix function
@@ -52,11 +53,25 @@ async def on_guild_remove(guild):
     with open(os.path.join(os.path.dirname(__file__), "prefixes.json",), "r") as f:
         prefixes = json.load(f)
         f.close()
+    with open(os.path.join(os.path.dirname(__file__), "guild.data.json", ), "r") as e:
+        join_message = json.load(e)
+        f.close()
+    with open(os.path.join(os.path.dirname(__file__), "guild.data2.json", ), "r") as i:
+        leave_message = json.load(i)
+        f.close()
 
     prefixes.pop(str(guild.id))
+    join_message.pop(str(guild.id))
+    leave_message.pop(str(guild.id))
 
     with open(os.path.join(os.path.dirname(__file__), "prefixes.json"), "w") as f:
         json.dump(prefixes, f, indent=4)
+        f.close()
+    with open(os.path.join(os.path.dirname(__file__), "guild_data.json"), "w") as e:
+        json.dump(join_message, e, indent=4)
+        f.close()
+    with open(os.path.join(os.path.dirname(__file__), "guild_data2.json"), "w") as i:
+        json.dump(leave_message, i, indent=4)
         f.close()
 
 
@@ -111,22 +126,6 @@ async def wcreate_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
         await ctx.send('Sorry, you are not allowed to use this command.')
 
-
-# Removing useless data
-
-@client.event
-async def on_guild_remove(guild):
-    with open(os.path.join(os.path.dirname(__file__), "guild.data.json", ), "r") as f:
-        join_message = json.load(f)
-        f.close()
-
-    join_message.pop(str(guild.id))
-
-    with open(os.path.join(os.path.dirname(__file__), "guild_data.json"), "w") as f:
-        json.dump(join_message, f, indent=4)
-        f.close()
-
-
 # Creating a leave channel for members
 
 @client.command(aliases=['leavecreate', 'lc'])
@@ -153,22 +152,6 @@ async def lcreate(ctx, *, msg, filename="guild_data2.json"):
 async def lcreate_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
         await ctx.send('Sorry, you are not allowed to use this command.')
-
-
-# Removing useless data
-
-@client.event
-async def on_guild_remove(guild):
-    with open(os.path.join(os.path.dirname(__file__), "guild.data2.json", ), "r") as f:
-        leave_message = json.load(f)
-        f.close()
-
-    leave_message.pop(str(guild.id))
-
-    with open(os.path.join(os.path.dirname(__file__), "guild_data2.json"), "w") as f:
-        json.dump(leave_message, f, indent=4)
-        f.close()
-
 
 # Leave event
 
@@ -201,6 +184,7 @@ async def on_member_join(member, filename="guild_data.json"):
 
 
 # Old status changing function
+
 '''
     Status = cycle(['Status1', "Status2"])
 
@@ -221,231 +205,51 @@ async def on_ready():
     await client.change_presence(activity=activity)
     print('Online now!')
 
-
-# Ping command
-
-@client.command()
-async def ping(ctx):
-    await ctx.send(f':ping_pong: Pong! {round(client.latency * 1000)}ms :ping_pong: ')
-
-
-# 8 Ball command
-
-@client.command(aliases=['8ball', '8B'])
-async def _8ball(ctx, *, question):
-    responses = [f'It is certain...',
-                 'It is decidedly so...',
-                 'Without a doubt...',
-                 'Yes - definitely...',
-                 'You may rely on it...',
-                 'As I see it, yes...',
-                 'Most likely...',
-                 'Outlook good...',
-                 'Yes...',
-                 'Signs point to yes...',
-                 'Reply hazy, try again...',
-                 'Ask again later...',
-                 'Better not tell you now...',
-                 'Cannot predict now...',
-                 'Concentrate and ask again...',
-                 'Do not count on it...',
-                 'My reply is no...',
-                 'My sources say no...',
-                 'Outlook not so good...',
-                 'Very doubtful...']
-    await ctx.send(f':8ball: Question: {question} :8ball:\n:8ball: Answer: {random.choice(responses)} :8ball:') \
-
-
-
-# Unban command
-
-@client.command()
-@commands.has_permissions(ban_members=True)
-async def unban(ctx, *,  member):
-    banned_users = await ctx.guild.bans()
-    member_name, member_discriminator = member.split('#')
-
-    for ban_entry in banned_users:
-        user = ban_entry.user
-        if (user.name, user.discriminator) == (member_name, member_discriminator):
-            await ctx.guild.unban(user)
-            await ctx.send(f'{user.name}#{user.discriminator} has been unbanned. ')
-            return
-
-
-# Insufficient permission
-
-@unban.error
-async def unban_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send('Sorry, you are not allowed to use this command.')
-
-
-# Kick command
-
-@client.command()
-@commands.has_permissions(kick_members=True)
-async def kick(ctx, member: discord.Member, *, reason=None):
-    await member.kick(reason=reason)
-    await ctx.send(f'Kicked {member.mention}')
-
-
-# Insufficient permission
-
-@kick.error
-async def kick_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send('Sorry, you are not allowed to use this command.')
-
-
-# Ban command
-
-@client.command()
-@commands.has_permissions(ban_members=True)
-async def ban(ctx, member: discord.Member, *, reason=None):
-    await member.ban(reason=reason)
-    await ctx.send(f'Banned {member.mention}')
-
-
-# Insufficient permission
-
-@ban.error
-async def ban_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send('Sorry, you are not allowed to use this command.')
-
-
-# Deleting messages command
-
-@client.command()
-@commands.has_permissions(manage_messages=True)
-async def clear(ctx, amount: int):
-    await ctx.channel.purge(limit=amount + 1)
-    await ctx.send(f'Cleared {amount} messages')
-
-
-# Insufficient permission
-
-@clear.error
-async def clear_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send('Sorry, you are not allowed to use this command.')
-    elif isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send('Please specify the number of messages you want to clear.')
-
-
-# Spotify Status Reader
-
-@client.command()
-@commands.guild_only()
-async def spotify(ctx, user: discord.Member = None):
-    user = user or ctx.author
-    spot = next((activity for activity in user.activities if isinstance(activity, discord.Spotify)), None)
-    if spot is None:
-        await ctx.send(f"{user.name} is not listening to Spotify")
-        return
-    embedspotify = discord.Embed(title=f"{user.name}'s Spotify", color=0x1eba10)
-    embedspotify.add_field(name="Song", value=spot.title)
-    embedspotify.add_field(name="Artist", value=spot.artist)
-    embedspotify.add_field(name="Album", value=spot.album)
-    embedspotify.set_thumbnail(url=spot.album_cover_url)
-    await ctx.send(embed=embedspotify)
-
-
-# Fake warn command
-
-@client.command()
-async def warn(ctx, reason: str, member: discord.Member = None):
-    member = ctx.author if not member else member
-    await ctx.send(f'/warn {member} {reason} ')
-
-
-# PP command
-
-@client.command()
-async def pp(ctx, user: discord.Member = None):
-    user = user or ctx.author
-    print(user)
-
-    if user.id == 238243351608950784:
-        await ctx.send('8' + '=' * randint(5, 10) + 'D')
-
-    elif user.id == 452474671712174091:
-        await ctx.send('8' + '=' * randint(0, 5) + 'D')
-
-    elif user.id == 576785017255100417:
-        await ctx.send('8' + '=' * randint(0, 5) + 'D')
-
-    elif user.id == 340879927647666176:
-        await ctx.send('8D')
-        await ctx.send("Soge is virus's waifu no boy")
-
-    else:
-        await ctx.send('8' + '=' * randint(0, 10) + 'D')
-
-
-# User info command
-
-@client.command()
-async def userinfo(ctx, member: discord.Member = None):
-
-    member = ctx.author if not member else member
-    roles = [role for role in member.roles]
-
-    embed = discord.Embed(colour=member.color, timestamp=ctx.message.created_at)
-
-    embed.set_author(name=f"User Info - {member}")
-    embed.set_thumbnail(url=member.avatar_url)
-    embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.avatar_url)
-
-    embed.add_field(name="ID:", value=member.id)
-    embed.add_field(name="Guild name:", value=member.display_name)
-
-    embed.add_field(name="Created at:", value=member.created_at.strftime("%a, %#d %B %Y, %I:%M %p UTC"))
-    embed.add_field(name="Joined at:", value=member.joined_at.strftime("%a, %#d %B %Y, %I:%M %p UTC"))
-
-    embed.add_field(name=f"Roles ({len(roles)})", value=" ".join([role.mention for role in roles]))
-    embed.add_field(name="Top role:", value=member.top_role.mention)
-
-    embed.add_field(name="Bot?", value=member.bot)
-
-    await ctx.send(embed=embed)
-
-
-# Gay measuring command
-
-@client.command()
-async def howgay(ctx, member: discord.Member = None):
-    member = ctx.author if not member else member
-    if member.id == 452474671712174091:
-        embed = discord.Embed(title=f"{member.name}'s Gayness", color=0xffc0cb)
-        embed.add_field(name="How gay?", value=f":rainbow_flag: {member.name} is {randint(65,100)}% gay :rainbow_flag: ")
-        await ctx.send(embed=embed)
-    else:
-        embed = discord.Embed(title=f"{member.name}'s Gayness", color=0xffc0cb)
-        embed.add_field(name="How gay?", value=f":rainbow_flag: {member.name} is {randint(0, 100)}% gay :rainbow_flag: ")
-        await ctx.send(embed=embed)
-
 # Loading cogs
 
 @client.command()
 async def load(ctx, extension):
-    client.load_extension(f'cogs.{extension}')
+    if ctx.author.id == 238243351608950784:
+        client.load_extension(f'cogs.{extension}')
+    else:
+        return
 
 
 # Unloading cogs
 
 @client.command()
 async def unload(ctx, extension):
-    client.unload_extension(f'cogs.{extension}')
+    if ctx.author.id == 238243351608950784:
+        client.unload_extension(f'cogs.{extension}')
+    else:
+        return
+
+# Loading Cogs automatically on start up
+
+initial_extensions = ["cogs.Moderation","cogs.Misc", "cogs.LevelSystemDB", "cogs.EconomySystemDB"]
 
 
-# Finding cog file
+if __name__ == '__main__':
+    for extension in initial_extensions:
+        try:
+            client.load_extension(extension)
+        except Exception as e:
+            print(f'Failed to load extension {extension}.', file=sys.stderr)
+            traceback.print_exc()
 
-for filename in os.listdir('./Discord bot/cogs'):
-    if filename.endswith(f'.py'):
-        client.load_extension(f'cogs.{filename[:-3]}')
+
+# Creating a DataBase Pool Function
+
+async def create_db_pool():
+    client.pg_con = await asyncpg.create_pool(database="DiscordBot-DB", user="postgres", password="virusvs321")
+
+# Looping the DataBase Pool Function
+
+client.loop.run_until_complete(create_db_pool())
 
 
 # Discord token
-client.run('Njk5MzkzMDM0NTM3OTI2NzEw.Xrc5og.bWuGl6k0UqMOvieKUK3TzO0TaEc')
+
+f = open("Discord Token.txt", "r")
+
+client.run(f.read())
